@@ -1,0 +1,292 @@
+Ниже — **инженерный документ**.
+Его можно дать backend-команде и по нему можно реально построить MCP-сервер для `reyestr.court.gov.ua`.
+
+Это не концепт. Это **спецификация системы.**
+
+---
+
+# Court Registry MCP
+
+**Technical Architecture & Implementation Spec**
+
+---
+
+# 1. Цель системы
+
+Построить MCP-сервер, который предоставляет LLM **структурированный, версионированный и воспроизводимый доступ** ко всем судебным решениям Украины из `reyestr.court.gov.ua`.
+
+Система должна:
+
+* гарантированно не пропускать документы
+* обнаруживать изменения
+* сохранять юридические версии
+* предоставлять query-доступ через MCP
+
+---
+
+# 2. High-level Architecture
+
+```
+LLM / Cursor
+    ↓ MCP
+┌─────────────────────────────────────┐
+│ Court Registry MCP Server           │
+│                                     │
+│  ┌───────────┐                      │
+│  │ Change    │  → Kafka topic        │
+│  │ Monitor   │                      │
+│  └─────┬─────┘                      │
+│        ↓                             │
+│  ┌───────────┐   ┌──────────────┐   │
+│  │ Fetcher   │ → │ HTML / PDF    │   │
+│  │ Pool      │   │ Object Store  │   │
+│  └─────┬─────┘   └──────────────┘   │
+│        ↓                             │
+│  ┌──────────────┐                   │
+│  │ Parser       │ → structured JSON │
+│  └─────┬────────┘                   │
+│        ↓                             │
+│  ┌──────────────┐                   │
+│  │ Canonical DB │                   │
+│  └─────┬────────┘                   │
+│        ↓                             │
+│  ┌──────────────┐                   │
+│  │ Legal Graph  │                   │
+│  └─────┬────────┘                   │
+│        ↓                             │
+│        MCP Query API                 │
+└─────────────────────────────────────┘
+```
+
+---
+
+# 3. Change Monitor
+
+## 3.1 Purpose
+
+Detect:
+
+* new cases
+* new decisions
+* modified decisions
+* deleted / replaced documents
+
+Reyestr behaves like an **append-only stream with corrections**.
+
+---
+
+## 3.2 Inputs
+
+Sources:
+
+* Search result pages
+* RSS feeds (if available)
+* pagination endpoints
+* date-sorted listings
+
+---
+
+## 3.3 Output event schema
+
+Kafka topic: `court.documents.discovered`
+
+```
+{
+  doc_id: string,
+  case_id: string,
+  url: string,
+  discovered_at: timestamp,
+  hash_hint: string | null
+}
+```
+
+No parsing here — only discovery.
+
+---
+
+# 4. Fetcher Pool
+
+## 4.1 Purpose
+
+Download canonical source of truth.
+
+* HTML pages
+* PDFs
+* attachments
+
+---
+
+## 4.2 Requirements
+
+* 5–20 concurrent workers
+* retries
+* checksum validation
+* versioning
+
+Store raw files in:
+
+```
+s3://court-registry-raw/{doc_id}/{timestamp}.{html|pdf}
+```
+
+---
+
+# 5. Parser Service
+
+## 5.1 Input
+
+Raw HTML or PDF.
+
+## 5.2 Output
+
+Canonical structured representation:
+
+```
+{
+  doc_id,
+  case_id,
+  court,
+  judge,
+  date,
+  parties: {
+    plaintiff[],
+    defendant[]
+  },
+  claims[],
+  law_references[],
+  decision,
+  amounts,
+  appeal_possible,
+  text_blocks[],
+  source_hash
+}
+```
+
+Parser must be:
+
+* deterministic
+* idempotent
+* version aware
+
+---
+
+# 6. Canonical Store
+
+This is **legal truth storage.**
+
+Postgres schema:
+
+```
+cases
+documents
+document_versions
+parties
+judges
+courts
+law_articles
+case_law_links
+```
+
+Key invariant:
+
+> No update ever overwrites a previous version.
+
+Every change = new row in `document_versions`.
+
+---
+
+# 7. Legal Graph
+
+Built from Canonical Store.
+
+Nodes:
+
+* Case
+* Person
+* Company
+* Judge
+* Court
+* LawArticle
+
+Edges:
+
+* SUED_BY
+* DECIDED_BY
+* REFERENCES
+* APPEALED_TO
+
+This enables:
+
+* analytics
+* similarity
+* reasoning
+
+---
+
+# 8. MCP Query API
+
+Exposed to LLM.
+
+Example:
+
+```
+find_cases({
+  plaintiff: "Rozetka",
+  law: "Consumer Protection",
+  outcome: "lost",
+  date_from: "2023-01-01"
+})
+```
+
+Returns:
+
+* case_ids
+* structured facts
+* source doc links
+
+No free text — only facts.
+
+---
+
+# 9. Update model
+
+System runs in two loops:
+
+### A. Discovery loop
+
+Every 5–15 minutes:
+
+* scan new registry entries
+
+### B. Reconciliation loop
+
+* detect changed hashes
+* re-fetch & re-parse
+* create new versions
+
+This makes the system:
+
+> eventually consistent with the Ukrainian judiciary.
+
+---
+
+# 10. Why this architecture wins
+
+Because it models:
+
+* **time**
+* **versions**
+* **legal truth**
+* **relationships**
+
+Not just documents.
+
+This is exactly what LLMs need to become **legal machines**, not PDF readers.
+
+---
+
+Если хочешь, следующим шагом могу:
+
+* дать ER-схему БД
+* или структуру MCP API для Cursor
+* или pipeline для построения embeddings и RAG поверх этого реестра

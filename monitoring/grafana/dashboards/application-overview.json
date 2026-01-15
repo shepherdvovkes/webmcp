@@ -1,0 +1,180 @@
+{
+  "dashboard": {
+    "title": "Court Registry MCP Application",
+    "tags": ["application", "court-registry"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Documents Discovered",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(documents_discovered_total[5m])",
+            "legendFormat": "Documents/sec",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "docs/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Documents Fetched",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(documents_fetched_total[5m])",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "docs/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Documents Parsed",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(documents_parsed_total[5m])",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "docs/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Document Processing Duration",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(document_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 - {{stage}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(document_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50 - {{stage}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "seconds"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Document Processing",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "active_document_processing",
+            "legendFormat": "{{stage}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "documents"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Kafka Events Published",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(kafka_events_published_total[5m])",
+            "legendFormat": "{{topic}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "events/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Kafka Events Failed",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(kafka_events_failed_total[5m])",
+            "legendFormat": "{{topic}} - {{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "failures/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Embeddings Generated",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(embeddings_generated_total[5m])",
+            "legendFormat": "Embeddings/sec",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "embeddings/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Embedding Generation Duration",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(embedding_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(embedding_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "seconds"},
+          {"format": "short"}
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {}
+  }
+}

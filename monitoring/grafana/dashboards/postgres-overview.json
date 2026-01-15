@@ -1,0 +1,161 @@
+{
+  "dashboard": {
+    "title": "PostgreSQL Overview",
+    "tags": ["postgres", "database"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "15s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Database Size",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "pg_database_size_bytes{datname=\"court_registry\"}",
+            "legendFormat": "Database Size",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "Size"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Active Connections",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"court_registry\"}",
+            "legendFormat": "Active Connections",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "connections"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Transactions Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_xact_commit{datname=\"court_registry\"}[5m]) + rate(pg_stat_database_xact_rollback{datname=\"court_registry\"}[5m])",
+            "legendFormat": "Transactions",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "txn/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Tuples Inserted Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_tup_inserted{datname=\"court_registry\"}[5m])",
+            "legendFormat": "Tuples Inserted",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "tuples/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Tuples Updated Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_tup_updated{datname=\"court_registry\"}[5m])",
+            "legendFormat": "Tuples Updated",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "tuples/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Tuples Deleted Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_tup_deleted{datname=\"court_registry\"}[5m])",
+            "legendFormat": "Tuples Deleted",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "tuples/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Cache Hit Ratio",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(pg_stat_database_blks_hit{datname=\"court_registry\"}[5m])) / (sum(rate(pg_stat_database_blks_hit{datname=\"court_registry\"}[5m])) + sum(rate(pg_stat_database_blks_read{datname=\"court_registry\"}[5m])))",
+            "legendFormat": "Cache Hit Ratio",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "ratio", "max": 1, "min": 0},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Table Sizes (Top 10)",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "topk(10, pg_class_relsize_bytes{relkind=\"r\"})",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Size (bytes)"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {}
+  }
+}

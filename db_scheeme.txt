@@ -1,0 +1,233 @@
+Вот **ER-схема**, которая реально выдерживает:
+
+* версии судебных решений
+* апелляции
+* смену сторон
+* аналитику
+* работу LLM
+
+Это не «таблички для сайта». Это **юридическая модель государства.**
+
+---
+
+# 🧩 1. Core Entities
+
+```
+Case
+----
+id (UUID)
+registry_number
+court_id
+category
+opened_at
+closed_at
+status
+```
+
+```
+Court
+-----
+id
+name
+region
+level (local / appeal / supreme)
+```
+
+```
+Judge
+-----
+id
+full_name
+court_id
+```
+
+---
+
+# 📄 2. Document & Versioning
+
+```
+Document
+--------
+id
+case_id
+type (decision, ruling, order, appeal)
+current_version_id
+```
+
+```
+DocumentVersion
+---------------
+id
+document_id
+version_number
+published_at
+source_url
+source_hash
+raw_storage_path
+parsed_json
+```
+
+> ❗ НИКОГДА не обновляется. Только добавляется.
+
+---
+
+# 👥 3. Parties & Roles
+
+```
+Party
+-----
+id
+type (person | company | state)
+normalized_name
+tax_id (nullable)
+```
+
+```
+CaseParty
+---------
+case_id
+party_id
+role (plaintiff, defendant, third_party, prosecutor)
+```
+
+---
+
+# ⚖️ 4. Legal Meaning
+
+```
+LawArticle
+----------
+id
+code (e.g. "CCU 625")
+title
+```
+
+```
+DocumentLawRef
+--------------
+document_version_id
+law_article_id
+```
+
+```
+Claim
+-----
+id
+case_id
+claim_type
+amount
+currency
+```
+
+```
+DecisionOutcome
+---------------
+document_version_id
+party_id
+result (won | lost | partial)
+amount_awarded
+```
+
+---
+
+# 🔁 5. Appeals & Lineage
+
+```
+CaseRelation
+------------
+parent_case_id
+child_case_id
+relation_type (appeal, cassation, retrial)
+```
+
+```
+DocumentRelation
+----------------
+parent_document_version_id
+child_document_version_id
+relation_type (amends, cancels, refers)
+```
+
+---
+
+# 🧠 6. Parsing & Provenance
+
+```
+ParseRun
+--------
+id
+document_version_id
+parser_version
+parsed_at
+confidence_score
+```
+
+```
+EntityMention
+-------------
+id
+document_version_id
+entity_type (judge, party, law, amount)
+entity_id
+text_span
+```
+
+Это нужно, чтобы:
+
+> можно было доказать, откуда LLM взял каждый факт.
+
+---
+
+# 🔎 7. Indexing for MCP
+
+```
+SearchIndex
+-----------
+entity_type
+entity_id
+text_vector
+```
+
+Для:
+
+* поиска
+* RAG
+* similarity
+* agent queries
+
+---
+
+# 🧠 Что это даёт
+
+Ты можешь спросить:
+
+> «Какие судьи чаще всего выносят решения против банков по 625 статье?»
+
+И база реально ответит.
+
+---
+
+# ⚠️ Это ключевая разница с обычными реестрами
+
+Обычные системы хранят:
+
+> «Вот PDF»
+
+Эта схема хранит:
+
+> «Вот как устроено право во времени»
+
+Это фундамент для:
+
+* Legal AI
+* risk scoring
+* case prediction
+* автоматической подготовки исков
+
+---
+
+Если хочешь, дальше можно:
+
+* добавить схему для RAG embeddings
+* или показать, как Cursor через MCP этим будет пользоваться
+* или как из этого делается предиктивная аналитика судов

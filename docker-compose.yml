@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  court-registry-mcp:
+    build: .
+    container_name: court-registry-mcp
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+      - "9002:9001"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - MINIO_ENDPOINT=localhost:9000
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+      - minio_data:/app/minio-data
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: court-registry-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-court_registry}
+      POSTGRES_USER: ${POSTGRES_USER:-court_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-court_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: court-registry-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: court-registry-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: court-registry-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+      - "9999:9999"  # JMX port
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: court-registry-kafka-exporter
+    depends_on:
+      - kafka
+    command:
+      - '--kafka.server=kafka:9092'
+    ports:
+      - "9308:9308"
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: court-registry-postgres-exporter
+    depends_on:
+      - postgres
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-court_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-court_registry}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: court-registry-redis-exporter
+    depends_on:
+      - redis
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    ports:
+      - "9121:9121"
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: court-registry-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    depends_on:
+      - kafka-exporter
+      - postgres-exporter
+      - redis-exporter
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: court-registry-grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    restart: unless-stopped
+    networks:
+      - court-registry-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  court-registry-network:
+    driver: bridge

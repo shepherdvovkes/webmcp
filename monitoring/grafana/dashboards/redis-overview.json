@@ -1,0 +1,217 @@
+{
+  "dashboard": {
+    "title": "Redis Overview",
+    "tags": ["redis", "cache"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "15s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Connected Clients",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "redis_connected_clients",
+            "legendFormat": "Connected Clients",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "clients"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Memory Used",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Memory Used",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "bytes"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Commands Processed Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(redis_commands_processed_total[5m])",
+            "legendFormat": "Commands/sec",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "cmds/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Keyspace Operations",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(redis_keyspace_keys_total[5m])",
+            "legendFormat": "Keys",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(redis_keyspace_expires_total[5m])",
+            "legendFormat": "Expires",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "ops/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Hit Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))",
+            "legendFormat": "Hit Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "ratio", "max": 1, "min": 0},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Network I/O",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(redis_net_input_bytes_total[5m])",
+            "legendFormat": "Input",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(redis_net_output_bytes_total[5m])",
+            "legendFormat": "Output",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "B/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Total Keys",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(redis_db_keys)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Uptime",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24},
+        "targets": [
+          {
+            "expr": "redis_uptime_in_seconds",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Memory Usage Percentage",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 70},
+              {"color": "red", "value": 90}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {}
+  }
+}

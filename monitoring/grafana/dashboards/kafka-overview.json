@@ -1,0 +1,165 @@
+{
+  "dashboard": {
+    "title": "Kafka Overview",
+    "tags": ["kafka", "messaging"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Messages In Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_server_brokertopicmetrics_messagesin_total[5m]))",
+            "legendFormat": "Messages In",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "msg/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Messages Out Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_server_brokertopicmetrics_messagesout_total[5m]))",
+            "legendFormat": "Messages Out",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "msg/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Topic Messages Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_topic_partition_current_offset[5m])) by (topic)",
+            "legendFormat": "{{topic}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "msg/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Consumer Lag",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(kafka_consumergroup_lag_sum) by (consumergroup, topic)",
+            "legendFormat": "{{consumergroup}} - {{topic}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "messages"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Partition Count",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "count(kafka_topic_partition_current_offset)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Controller Count",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16},
+        "targets": [
+          {
+            "expr": "kafka_controller_kafkacontroller_activecontrollercount",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Bytes In Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_server_brokertopicmetrics_bytesin_total[5m]))",
+            "legendFormat": "Bytes In",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "B/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Bytes Out Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(rate(kafka_server_brokertopicmetrics_bytesout_total[5m]))",
+            "legendFormat": "Bytes Out",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "B/s"},
+          {"format": "short"}
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {}
+  }
+}
